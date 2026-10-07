@@ -1,0 +1,142 @@
+name: Package JavaFX client
+
+on:
+  workflow_call:
+    inputs:
+      project-directory:
+        type: string
+        default: .
+      artifact-name:
+        type: string
+        required: true
+      dependencies:
+        type: string
+        default: ''
+      release:
+        type: boolean
+        default: true
+      smoke-test:
+        type: boolean
+        default: false
+    secrets:
+      GOBITECH_ADMIN_LOGIN:
+        required: false
+      GOBITECH_ADMIN_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  ORG_GRADLE_PROJECT_useLocalSources: 'false'
+  PACKAGING_SOURCE: ${{ vars.MEGALODONTE_PACKAGING_SOURCE || 'git+https://github.com/eliezer-dev-software-enginner/megalodonte-packaging.git@main' }}
+  JAVAFX_MODULES_ZIP_URL: https://github.com/eliezer-dev-software-enginner/megalodonte-base/releases/download/utilities/java_fx_modules.zip
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            kind: deb
+          - os: windows-latest
+            platform: windows
+            kind: msi
+    runs-on: ${{ matrix.os }}
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      name: ${{ steps.meta.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Utilities use 21; old checkouts may still require 17. The active JDK is 25.
+          java-version: |
+            17
+            21
+            25
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install shared packaging
+        shell: bash
+        run: python -m pip install "$PACKAGING_SOURCE"
+      - name: Resolve application metadata
+        id: meta
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ inputs.project-directory }}
+          CHECK_TAG: ${{ inputs.release }}
+        run: |
+          args=()
+          if [ "$CHECK_TAG" = true ]; then args+=(--check-tag); fi
+          python -m megalodonte_packaging.ci metadata --project "$PROJECT_DIRECTORY" --output "$GITHUB_OUTPUT" "${args[@]}"
+      - name: Install Linux packaging and display tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot
+      - name: Install WiX
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install wixtoolset --version=3.14.1 -y
+      - name: Download JavaFX SDKs
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/java_fx_modules"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/jfx.zip" "$JAVAFX_MODULES_ZIP_URL"
+          unzip -q "$RUNNER_TEMP/jfx.zip" -d "$RUNNER_TEMP/java_fx_modules"
+          echo "JAVAFX_MODULES_HOME=$RUNNER_TEMP/java_fx_modules" >> "$GITHUB_ENV"
+      - name: Build and publish dependencies to Maven local
+        shell: bash
+        env:
+          DEPENDENCIES: ${{ inputs.dependencies }}
+        run: |
+          read -r -a dependencies <<< "$DEPENDENCIES"
+          command=(python -m megalodonte_packaging.ci prepare --workspace "$RUNNER_TEMP/megalodonte-dependencies" --dependencies "${dependencies[@]}")
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a "${command[@]}"; else "${command[@]}"; fi
+      - name: Package native installer
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ inputs.project-directory }}
+          PACKAGE_KIND: ${{ matrix.kind }}
+          SMOKE_TEST: ${{ inputs.smoke-test }}
+          GOBITECH_ADMIN_LOGIN: ${{ secrets.GOBITECH_ADMIN_LOGIN }}
+          GOBITECH_ADMIN_PASSWORD: ${{ secrets.GOBITECH_ADMIN_PASSWORD }}
+        run: |
+          command=(python -m megalodonte_packaging --project "$PROJECT_DIRECTORY" build "$PACKAGE_KIND")
+          if [ "$RUNNER_OS" = Linux ]; then
+            if [ "$SMOKE_TEST" = true ]; then command+=(--smoke-test); fi
+            xvfb-run -a "${command[@]}"
+          else
+            "${command[@]}"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}-${{ matrix.platform }}
+          path: |
+            ${{ inputs.project-directory }}/dist/*.deb
+            ${{ inputs.project-directory }}/dist/*.msi
+          if-no-files-found: error
+
+  release:
+    if: inputs.release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifact-name }}-*
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.package.outputs.version }}
+          name: ${{ needs.package.outputs.name }} v${{ needs.package.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            artifacts/**/*.deb
+            artifacts/**/*.msi
+          fail_on_unmatched_files: true

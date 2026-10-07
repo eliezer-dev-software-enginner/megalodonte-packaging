@@ -116,7 +116,7 @@ Os workflows de instaladores usam a variável GitHub `MEGALODONTE_PACKAGING_SOUR
 para instalar a mesma biblioteca. Configure preferencialmente uma variável da
 organização com a URL de um wheel publicado, ou uma referência pip Git fixada num
 commit. A mesma fonte/versionamento pode atender todos os repositórios.
-O workflow falha cedo com uma orientação se essa fonte não estiver definida.
+Sem essa variável, o workflow instala o checkout de `main` deste repositório.
 A biblioteca criada aqui é local; publicar esse wheel/repositório é uma etapa de
 infraestrutura separada. Não existe fallback para os scripts antigos.
 
@@ -134,3 +134,8 @@ Os testes cobrem configuração, comandos Windows/Linux, staging, manifestos de
 classpath, nativos, versões, redaction, limpeza e preservação de saídas. No workspace,
 também confirmam que os 12 adaptadores resolvem a mesma implementação.
 Os testes não instalam aplicativos nem executam credenciais reais.
+
+## GitHub Actions
+
+Todos os clientes JavaFX compartilham o workflow de instaladores deste repositório.
+Consulte [a configuração e a ordem de disponibilização](docs/GITHUB_ACTIONS.md).

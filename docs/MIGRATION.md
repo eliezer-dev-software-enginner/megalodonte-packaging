@@ -48,8 +48,9 @@ que esses assets opcionais existam; agora falham com uma mensagem precisa.
 
 ## CI
 
-Os workflows dos três aplicativos principais instalam a biblioteca compartilhada
-antes do empacotamento. Defina MEGALODONTE_PACKAGING_SOURCE nas variáveis GitHub
-(preferencialmente de organização), apontando ao mesmo wheel/commit para todos.
-Esse checkout local não foi publicado. Os workflows não podem usar uma pasta local
-da máquina do desenvolvedor e não fazem fallback para implementações antigas.
+Todos os 12 clientes usam o workflow compartilhado deste repositório. Ele clona e
+publica as bibliotecas em Maven local no runner, incluindo pack-utilities nas novas
+coordenadas `pack.utilities:pack-utilities:1.0.0`. A implementação Python é instalada
+de `main` ou da variável `MEGALODONTE_PACKAGING_SOURCE` (wheel/commit comum).
+Consulte [GITHUB_ACTIONS.md](GITHUB_ACTIONS.md) para a ordem de disponibilização e
+configuração dos secrets. Nenhum workflow usa pastas da máquina do desenvolvedor.
