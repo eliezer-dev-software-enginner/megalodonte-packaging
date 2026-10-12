@@ -6,7 +6,7 @@ nativas, jpackage, perfis de distribuição e incremento de versão.
 
 Requer Python 3.11+ e JDK completo. Não possui dependências Python em runtime.
 O SDK JavaFX deve corresponder à versão configurada. MSI é gerado no Windows com
-WiX; DEB e Flatpak são gerados no Linux. Não há compilação cruzada entre plataformas.
+WiX; DEB, Flatpak e AppImage são gerados no Linux. Não há compilação cruzada entre plataformas.
 
 ## Usar no workspace
 
@@ -42,6 +42,7 @@ A instalação pode ser feita numa venv, sem alterar o Python global.
 python scripts/package.py build msi
 python scripts/package.py build deb
 python scripts/package.py build app-image
+python scripts/package.py build appimage --run
 python scripts/package.py build msi --profile store
 python scripts/package.py build msi --profile updater
 python scripts/package.py build flatpak --install-flatpak
@@ -56,6 +57,7 @@ updater continuam sendo adaptadores curtos. Eles aceitam os mesmos flags da CLI.
 - `--dry-run`: mostra os comandos sem executar ferramentas, apagar arquivos ou ler credenciais.
 - `--platform windows|linux`: apenas com dry-run, para conferir ambas as plataformas.
 - `--skip-build`: reutiliza os artefatos Gradle; necessário ao chamar a biblioteca de uma task Gradle.
+- `--run`: executa o AppImage gerado e grava o log em `dist/appimage-run.log`.
 - `--smoke-test`: abre o aplicativo por até cinco segundos para testar o runtime.
 - `--open`: abre a pasta de saída; ignorado em CI.
 - `--keep-work`: mantém o staging para diagnóstico.

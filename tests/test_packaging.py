@@ -174,6 +174,40 @@ java_options = ["-Dexample.store=true"]
         self.assertEqual(keep.read_text(), "keep")
         self.assertFalse(builder.workspace("deb").exists())
 
+    def test_appimage_uses_shared_pipeline_and_replaces_only_its_output(self):
+        self.jar()
+        icon = self.root / "icon.svg"
+        icon.write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+        tool = self.root / "appimagetool"
+        tool.touch()
+        with (self.root / "packaging.toml").open("a") as stream:
+            stream.write('\n[build]\nmode="distribution"\njar="build/libs/sample.jar"\n'
+                         '[appimage_fixture]\n')
+        config = self.root / "packaging.toml"
+        config.write_text(config.read_text().replace('[appimage_fixture]', '').replace(
+            'main_class = "example.Main"', 'main_class = "example.Main"\nicon_linux = "icon.svg"'))
+        builder = self.builder(platform="linux")
+        def run(command, **kwargs):
+            name = Path(command[0]).name
+            if name == "jdeps":
+                return subprocess.CompletedProcess(command, 0, "java.base\n", "")
+            if name == "jlink":
+                Path(command[command.index("--output") + 1]).mkdir()
+            if name == "jpackage":
+                image = Path(command[command.index("--dest") + 1]) / "Sample"
+                (image / "bin").mkdir(parents=True)
+                (image / "bin/Sample").touch()
+            if name == "appimagetool":
+                Path(command[-1]).write_text("appimage")
+            return subprocess.CompletedProcess(command, 0)
+        with patch.dict(os.environ, {"APPIMAGETOOL": str(tool)}), patch.object(builder, "run", side_effect=run):
+            first = builder.package("appimage", skip_build=True)
+            self.assertEqual(first.name, "Sample-1.2.3-" + __import__("platform").machine() + ".AppImage")
+            self.assertEqual(first.read_text(), "appimage")
+            second = builder.package("appimage", skip_build=True)
+            self.assertEqual(second, first)
+            self.assertFalse(builder.workspace("appimage").exists())
+
     def test_version_bump_preserves_other_properties_and_comments(self):
         (self.root / "gradle.properties").write_text("# keep\nappVersion=1.2.3\nappPatch=0\nappName=sample\n")
         with contextlib.redirect_stdout(io.StringIO()):

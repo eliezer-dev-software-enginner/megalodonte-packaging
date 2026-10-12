@@ -42,7 +42,7 @@ def main(argv=None) -> int:
     describe = commands.add_parser("show", help="Show configuration and implementation path without reading credentials")
     describe.add_argument("--profile", default="default")
     package = commands.add_parser("build")
-    package.add_argument("kind", choices=("msi", "deb", "app-image", "flatpak"))
+    package.add_argument("kind", choices=("msi", "deb", "app-image", "appimage", "flatpak"))
     package.add_argument("--profile", default="default")
     package.add_argument("--platform", choices=("windows", "linux"), help="For dry-run previews only")
     package.add_argument("--dry-run", action="store_true", help="Print commands without builds, deletes or credential reads")
@@ -51,6 +51,7 @@ def main(argv=None) -> int:
     package.add_argument("--open", action="store_true", help="Open the output folder after successful packaging")
     package.add_argument("--keep-work", action="store_true")
     package.add_argument("--install-flatpak", action="store_true", help="Explicitly install Flatpak for the current user")
+    package.add_argument("--run", action="store_true", help="Launch the generated AppImage for testing")
     bump = commands.add_parser("version")
     bump.add_argument("action", choices=("patch", "release"))
     bump.add_argument("value", nargs="?")
@@ -68,14 +69,21 @@ def main(argv=None) -> int:
                               "build_tasks": config.build.get("tasks", ["clean", "shadowJar"]), "java_options": builder.java_options(redact=True)}, ensure_ascii=False, indent=2))
         elif args.dry_run:
             work = builder.workspace(args.kind)
-            print(json.dumps({"gradle": builder.gradle_command(), "jlink": builder.jlink_command(work),
-                              "jpackage": builder.jpackage_command(work, "app-image" if args.kind == "flatpak" else args.kind, redact=True)}, indent=2))
+            commands = {"gradle": builder.gradle_command(), "jlink": builder.jlink_command(work),
+                        "jpackage": builder.jpackage_command(work, "app-image" if args.kind in ("flatpak", "appimage") else args.kind, redact=True)}
+            if args.kind == "appimage":
+                commands["appimagetool"] = builder.appimage_command(work / "AppDir", args.project.resolve() / "dist" / "output.AppImage")
+            print(json.dumps(commands, indent=2))
         else:
             if args.platform:
                 raise ValueError("--platform is allowed only with --dry-run")
+            if args.run and args.kind != "appimage":
+                raise ValueError("--run is supported only for appimage")
             output = builder.package(args.kind, skip_build=args.skip_build, smoke=args.smoke_test,
                                      open_folder=args.open, keep_work=args.keep_work, install_flatpak=args.install_flatpak)
             print(f"Created: {output}")
+            if args.run:
+                print(f"AppImage running; log: {builder.launch_appimage(output)}")
         return 0
     except (ValueError, OSError, RuntimeError, KeyError) as error:
         print(f"Packaging error: {error}", file=sys.stderr)

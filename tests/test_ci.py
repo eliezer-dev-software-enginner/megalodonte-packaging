@@ -24,7 +24,7 @@ class CiTests(unittest.TestCase):
             "megalodonte-libs", "pack-utilities", "disgust-components", "megalodonte-jsonc-ui",
             "megalodonte-script-app", "megalodonte-simple-clipboard"])
         self.assertTrue(checkout.call_args_list[0].kwargs["submodules"])
-        self.assertEqual(run.call_args_list[1].args[0][1:3], ["test", "publishToMavenLocal"])
+        self.assertEqual(run.call_args_list[1].args[0][-4:-2], ["test", "publishToMavenLocal"])
         self.assertIn(":disgust-icons:publishToMavenLocal", run.call_args_list[2].args[0])
 
     def test_unknown_dependency_is_rejected_before_checkout(self):

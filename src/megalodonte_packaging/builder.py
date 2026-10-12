@@ -2,9 +2,11 @@
 from pathlib import Path
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
+import platform as host_platform
 import zipfile
 
 from .config import PackageConfig
@@ -56,7 +58,9 @@ class Packager:
             return (self.config.root / sdk.format(platform=self.platform, version=self.config.javafx_version)).resolve()
         env = os.environ.get("JAVAFX_MODULES_HOME")
         if env:
-            return Path(env).resolve() / f"{self.platform}-{self.config.javafx_version}"
+            candidate = Path(env).resolve() / f"{self.platform}-{self.config.javafx_version}"
+            if (candidate / "lib/javafx.controls.jar").is_file():
+                return candidate
         for parent in (self.config.root, *self.config.root.parents):
             for directory in (parent / "java_fx_modules", parent / "megalodonte-world/java_fx_modules"):
                 candidate = directory / f"{self.platform}-{self.config.javafx_version}"
@@ -65,7 +69,7 @@ class Packager:
         raise ValueError(f"Set JAVAFX_MODULES_HOME or javafx.sdk for JavaFX {self.config.javafx_version}")
 
     def workspace(self, kind: str) -> Path:
-        if kind not in ("msi", "deb", "app-image", "flatpak"):
+        if kind not in ("msi", "deb", "app-image", "appimage", "flatpak"):
             raise ValueError(f"Unsupported package type: {kind}")
         if not re.fullmatch(r"[A-Za-z0-9_-]+", self.profile_name):
             raise ValueError("Invalid profile name")
@@ -207,7 +211,7 @@ class Packager:
                    "--main-jar", "app.jar", "--main-class", self.config.main_class,
                    "--dest", str(work / "output"), "--type", kind, "--runtime-image", str(work / "runtime")]
         icon = self.config.app.get("icon_windows" if self.platform == "windows" else "icon_linux")
-        if icon:
+        if icon and not (self.platform == "linux" and kind == "app-image" and Path(icon).suffix.lower() == ".svg"):
             command += ["--icon", str(self.config.path(icon))]
         for key in ("description", "copyright"):
             value = self.config.app.get(key, self.config.properties.get("app" + key.title()))
@@ -232,8 +236,8 @@ class Packager:
         return command
 
     def preflight(self, kind: str):
-        if (kind == "msi" and self.platform != "windows") or (kind in ("deb", "flatpak") and self.platform != "linux"):
-            raise ValueError("Build MSI on Windows and DEB/Flatpak on Linux; cross-packaging is not supported")
+        if (kind == "msi" and self.platform != "windows") or (kind in ("deb", "flatpak", "appimage") and self.platform != "linux"):
+            raise ValueError("Build MSI on Windows and DEB/Flatpak/AppImage on Linux; cross-packaging is not supported")
         for name in ("java", "jdeps", "jlink", "jpackage"):
             if not Path(self.tool(name)).is_file():
                 raise ValueError(f"Missing JDK tool: {name}")
@@ -254,6 +258,60 @@ class Packager:
             flatpak = self.config.data.get("flatpak", {})
             if not flatpak.get("manifest") or not self.config.path(flatpak["manifest"]).is_file():
                 raise ValueError("Configure an existing flatpak.manifest for this application")
+        if kind == "appimage":
+            self.appimagetool()
+
+    def appimagetool(self) -> Path:
+        explicit = os.environ.get("APPIMAGETOOL")
+        if explicit:
+            tool = Path(explicit).expanduser().resolve()
+            if not tool.is_file():
+                raise ValueError(f"APPIMAGETOOL not found: {tool}")
+            return tool
+        installed = shutil.which("appimagetool")
+        if installed:
+            return Path(installed).resolve()
+        arch = host_platform.machine()
+        for parent in (self.config.root, *self.config.root.parents):
+            candidate = parent / "megalodonte-declarative/megalodonte-engine/build/tools" / f"appimagetool-{arch}.AppImage"
+            if candidate.is_file():
+                return candidate
+        raise ValueError("Set APPIMAGETOOL to an existing appimagetool or install it on PATH")
+
+    def appimage_command(self, appdir: Path, output: Path) -> list[str]:
+        return [str(self.appimagetool()), "--no-appstream", "--mksquashfs-opt", "-processors", "--mksquashfs-opt", "2", str(appdir), str(output)]
+
+    def build_appimage(self, work: Path, image: Path, destination: Path) -> Path:
+        appdir = work / "AppDir"
+        shutil.copytree(image, appdir)
+        launcher = appdir / "bin" / self.config.name
+        if not launcher.is_file():
+            raise ValueError(f"jpackage launcher missing: {launcher}")
+        (appdir / "AppRun").write_text(
+            '#!/bin/sh\nAPPDIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
+            + 'exec "$APPDIR/bin/"' + shlex.quote(self.config.name) + ' "$@"\n', encoding="utf-8")
+        (appdir / "AppRun").chmod(0o755)
+        desktop = appdir / "megalodonte.desktop"
+        desktop.write_text("[Desktop Entry]\nType=Application\nName=" + self.config.name
+                           + "\nExec=AppRun\nIcon=megalodonte\nCategories=Development;\nTerminal=false\n", encoding="utf-8")
+        icon = self.config.app.get("icon_linux")
+        if icon:
+            shutil.copy2(self.config.path(icon), appdir / ("megalodonte" + Path(icon).suffix.lower()))
+        else:
+            raise ValueError("AppImage requires app.icon_linux (PNG or SVG)")
+        shutil.copy2(appdir / ("megalodonte" + Path(icon).suffix.lower()), appdir / ".DirIcon")
+        final = destination / f"{self.config.name}-{self.config.version}-{host_platform.machine()}.AppImage"
+        temporary = final.with_name(final.name + ".tmp")
+        if temporary.exists():
+            temporary.unlink()
+        try:
+            env = {**self.environment(), "ARCH": host_platform.machine(), "APPIMAGE_EXTRACT_AND_RUN": "1"}
+            self.run(self.appimage_command(appdir, temporary), env=env)
+            temporary.chmod(0o755)
+            os.replace(temporary, final)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return final
 
     def smoke_test(self, work: Path):
         command = [str(work / "runtime/bin" / ("java.exe" if self.platform == "windows" else "java")),
@@ -288,13 +346,16 @@ class Packager:
         self.copy_natives(work)
         if smoke:
             self.smoke_test(work)
-        native_kind = "app-image" if kind == "flatpak" else kind
+        native_kind = "app-image" if kind in ("flatpak", "appimage") else kind
         (work / "output").mkdir()
         self.run(self.jpackage_command(work, native_kind), env=self.environment())
         destination = self.config.path("dist")
         destination.mkdir(exist_ok=True)
         profile_suffix = "" if self.profile_name == "default" else f"-{self.profile_name}"
-        if native_kind == "app-image":
+        if kind == "appimage":
+            created = work / "output" / self.config.name
+            final = self.build_appimage(work, created, destination)
+        elif native_kind == "app-image":
             created = work / "output" / self.config.name
             final = destination / f"{self.config.name}-{self.config.version}{profile_suffix}"
             if final.exists():
@@ -326,3 +387,18 @@ class Packager:
             elif shutil.which("xdg-open"):
                 subprocess.run(["xdg-open", str(destination)], check=False)
         return final
+
+    def launch_appimage(self, output: Path) -> Path:
+        if self.platform != "linux" or output.suffix != ".AppImage" or not output.is_file():
+            raise ValueError("Only an existing Linux AppImage can be launched")
+        log = self.config.path("dist/appimage-run.log")
+        with log.open("wb") as stream:
+            process = subprocess.Popen([str(output)], cwd=self.config.root,
+                                       env={**self.environment(), "APPIMAGE_EXTRACT_AND_RUN": "1"},
+                                       stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
+                                       start_new_session=True)
+        try:
+            code = process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            return log
+        raise RuntimeError(f"AppImage exited during startup (exit {code}); inspect {log}")
