@@ -1,143 +1,80 @@
 # Megalodonte Packaging
 
-Biblioteca Python local que centraliza a geração de instaladores JavaFX. Todos os
-aplicativos usam a mesma implementação de Gradle, jdeps, jlink, cópia de bibliotecas
-nativas, jpackage, perfis de distribuição e incremento de versão.
+`megalodonte-packaging` is the shared Python library for native JavaFX installers. It owns the Gradle → application input → `jdeps`/`jlink` → `jpackage` pipeline, versioning, launcher profiles, and AppImage assembly. Application repositories keep only `packaging.toml` and a thin command adapter; they do not copy packaging algorithms.
 
-Requer Python 3.11+ e JDK completo. Não possui dependências Python em runtime.
-O SDK JavaFX deve corresponder à versão configurada. MSI é gerado no Windows com
-WiX; DEB, Flatpak e AppImage são gerados no Linux. Não há compilação cruzada entre plataformas.
+The [codebase guide](docs/CODEBASE.md) maps each Python module to its responsibility and public API.
 
-## Usar no workspace
+## Supported hosts and outputs
 
-Os adaptadores de cada aplicativo encontram este checkout automaticamente. Não há
-cópias do algoritmo dentro dos clientes e não é necessário instalar via pip aqui.
+| Build host | Outputs | Required tools |
+| --- | --- | --- |
+| Linux | AppImage, DEB, Flatpak, application image | Python 3.11+, JDK with JMODs, matching JavaFX SDK; AppImage needs `appimagetool`, DEB needs `fakeroot`, Flatpak needs Flatpak Builder |
+| Windows | MSI | Python 3.11+, JDK with JMODs, matching JavaFX SDK, WiX Toolset |
 
-```powershell
-cd ../plics-sw
+Cross-packaging is not supported. The JavaFX SDK version must match the application's `packaging.toml`. The library has no Python runtime dependencies.
+
+## Workspace use
+
+From an application repository that has `packaging.toml` and `scripts/package.py`:
+
+```sh
 python scripts/package.py show
-python scripts/create-msi.py --dry-run --platform windows
-python scripts/create-msi.py
-```
-
-`show` informa a versão da biblioteca e o caminho real da implementação, permitindo
-conferir que todos os aplicativos usam a mesma fonte. O bootstrap prioriza o checkout
-local; `MEGALODONTE_PACKAGING_HOME` permite indicar explicitamente outra localização.
-Quando o checkout não existe, usa o pacote instalado no ambiente Python.
-
-Fora do workspace, instale a biblioteca em modo editável:
-
-```sh
-python -m pip install -e /caminho/megalodonte-packaging
-megalodonte-package --project /caminho/aplicativo show
-python -m megalodonte_packaging --project /caminho/aplicativo build deb
-```
-
-Alterações na biblioteca editável passam a valer para todos os clientes desse ambiente.
-A instalação pode ser feita numa venv, sem alterar o Python global.
-
-## Comandos
-
-```sh
-python scripts/package.py build msi
-python scripts/package.py build deb
-python scripts/package.py build app-image
 python scripts/package.py build appimage --run
+python scripts/package.py build deb
+python scripts/package.py build msi --dry-run --platform windows
+```
+
+The adapter discovers the shared checkout, or uses `MEGALODONTE_PACKAGING_HOME` when set. Outside this workspace, install the library in a virtual environment:
+
+```sh
+python -m pip install -e /path/to/megalodonte-packaging
+megalodonte-package --project /path/to/application show
+megalodonte-package --project /path/to/application build deb
+```
+
+`show` prints the library version, implementation path and resolved application metadata. It does not expose credentials.
+
+## Commands and options
+
+```sh
+python scripts/package.py build appimage --run
+python scripts/package.py build app-image
+python scripts/package.py build deb
+python scripts/package.py build msi
 python scripts/package.py build msi --profile store
-python scripts/package.py build msi --profile updater
 python scripts/package.py build flatpak --install-flatpak
 python scripts/package.py version patch
 python scripts/package.py version release 1.2.0
 ```
 
-Perfis devem existir na configuração do aplicativo. Os comandos antigos
-create-msi.py, create-deb.py, create-msi-store.py, create-flatpak.py e os scripts de
-updater continuam sendo adaptadores curtos. Eles aceitam os mesmos flags da CLI.
+Profiles must be declared by the application. `--dry-run` prints commands without building, deleting files or reading credentials. `--platform windows|linux` is available only with `--dry-run`. `--skip-build` reuses a Gradle output; `--smoke-test` briefly launches the generated runtime; `--keep-work` retains staging. `--open` opens the output directory outside CI. `--run` launches an AppImage and writes `dist/appimage-run.log`. `--install-flatpak` explicitly allows local installation; the default only builds.
 
-- `--dry-run`: mostra os comandos sem executar ferramentas, apagar arquivos ou ler credenciais.
-- `--platform windows|linux`: apenas com dry-run, para conferir ambas as plataformas.
-- `--skip-build`: reutiliza os artefatos Gradle; necessário ao chamar a biblioteca de uma task Gradle.
-- `--run`: executa o AppImage gerado e grava o log em `dist/appimage-run.log`.
-- `--smoke-test`: abre o aplicativo por até cinco segundos para testar o runtime.
-- `--open`: abre a pasta de saída; ignorado em CI.
-- `--keep-work`: mantém o staging para diagnóstico.
-- `--install-flatpak`: autoriza instalação Flatpak local; o padrão apenas constrói.
+## Configuration
 
-## Configuração e API
-
-Cada aplicativo possui `packaging.toml`, com `schema_version = 1`. Nome, versão,
-classe principal e vendor podem vir de gradle.properties. As particularidades do
-aplicativo ficam em dados, incluindo ícones, módulos, perfil Store, launchers extras
-e propriedades JVM obtidas do ambiente. Veja [CONFIGURATION.md](docs/CONFIGURATION.md).
+An application owns `packaging.toml` (`schema_version = 1`). It declares its name, main class, build mode, JavaFX version, icons, runtime modules, native exclusions, package metadata and optional profiles. Version and vendor can also come from `gradle.properties`. See [the configuration reference](docs/CONFIGURATION.md) and [migration notes](docs/MIGRATION.md).
 
 ```python
 from pathlib import Path
-from megalodonte_packaging import load_config, Packager
+from megalodonte_packaging import Packager, load_config
 
-config = load_config(Path("/caminho/aplicativo"))
-output = Packager(config).package("msi")
+config = load_config(Path('/path/to/application'))
+output = Packager(config).package('msi')
 ```
 
-O pipeline suporta fat JAR e classpath com dependências separadas. O cliente
-declarativo usa installDist e continua sem scripts Java de bootstrap ou empacotamento.
+The pipeline accepts a fat JAR or a distribution with separate dependency JARs. JavaFX and the linked runtime stay separate from the application input. Ambiguous application JAR selection fails explicitly; source, documentation and test JARs are excluded. `.env` is never copied into the installer.
 
-## Saídas e correções
+Staging is confined to `.packaging/<kind>-<profile>/` under the application root. Outputs go to `dist/`; building one format does not remove the others. Rebuilding the same installer replaces that file. An existing application-image directory must be removed explicitly. Failures keep staging for diagnosis.
 
-O staging fica em `.packaging/TIPO-PERFIL/`, sempre abaixo da raiz do aplicativo.
-O input do jpackage contém apenas JARs da aplicação. JavaFX e runtime ficam em
-diretórios separados, evitando duplicar o JRE no pacote. Ambiguidade na seleção do
-JAR gera erro; sources/javadoc não são usados como aplicação.
+For MSI, the three-field installer version maps `major.minor.micro` plus an optional patch to `major.minor.(micro*1000+patch)`. The business version and file name retain the original application version. Applications can override `windows.installer_version` when needed.
 
-Os artefatos vão para `dist/`. Builds de um tipo não apagam pacotes de outros tipos.
-Uma nova versão do mesmo instalador substitui somente seu próprio arquivo. Para
-app-image, uma saída existente precisa ser removida explicitamente antes de refazer.
-Falhas mantêm o staging para diagnóstico. `.env` nunca é copiado para o pacote.
+## Continuous integration
 
-O versionamento MSI usa três números: `major.minor.(micro*1000+patch)`, permitindo
-upgrades monotônicos entre patches e releases. A versão de negócio, os nomes dos
-arquivos e a propriedade JVM continuam usando appVersion/appPatch. Por exemplo,
-1.1.5 patch 2 gera versão MSI 1.1.5002 e arquivo Nome-1.1.5.2.msi. Essa conversão
-tem limites documentados e pode ser sobrescrita por windows.installer_version.
+The reusable [JavaFX package workflow](.github/workflows/package-javafx.yml) builds on Linux and Windows. Applications call it from their own repository; `MEGALODONTE_PACKAGING_SOURCE` can point to a pinned Git revision or a published wheel. Without that variable, the workflow installs this repository's `main` branch. The workflow uses the WiX version available on the Windows runner, avoiding a downgrade of an already installed toolset. See [GitHub Actions integration](docs/GITHUB_ACTIONS.md).
 
-## Aplicativos integrados
-
-Plics SW, Gobitech Pesagem, Nojo Engine UI Creator, os cinco exemplos Megalodonte,
-Everest, Megalodonte Cliente declarativo, FTP File Pusher e Disgust UI: 12 aplicativos.
-Bibliotecas do framework, Android e projetos LibGDX não são instaladores JavaFX.
-Veja [MIGRATION.md](docs/MIGRATION.md) para preservação das opções e diferenças conhecidas.
-
-## CI e distribuição da biblioteca
-
-Gere um wheel compartilhado:
+## Tests
 
 ```sh
-python -m pip wheel --no-deps --wheel-dir dist .
+PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Os workflows de instaladores usam a variável GitHub `MEGALODONTE_PACKAGING_SOURCE`
-para instalar a mesma biblioteca. Configure preferencialmente uma variável da
-organização com a URL de um wheel publicado, ou uma referência pip Git fixada num
-commit. A mesma fonte/versionamento pode atender todos os repositórios.
-Sem essa variável, o workflow instala o checkout de `main` deste repositório.
-A biblioteca criada aqui é local; publicar esse wheel/repositório é uma etapa de
-infraestrutura separada. Não existe fallback para os scripts antigos.
-
-Para CI com checkout da biblioteca disponível, basta usar pip install no caminho
-local, ou MEGALODONTE_PACKAGING_HOME. Instalar um wheel dispensa setuptools no runner.
-
-## Testes
-
-```powershell
-$env:PYTHONPATH = "$PWD/src"
-python -m unittest discover -s tests -v
-```
-
-Os testes cobrem configuração, comandos Windows/Linux, staging, manifestos de
-classpath, nativos, versões, redaction, limpeza e preservação de saídas. No workspace,
-também confirmam que os 12 adaptadores resolvem a mesma implementação.
-Os testes não instalam aplicativos nem executam credenciais reais.
-
-## GitHub Actions
-
-Todos os clientes JavaFX compartilham o workflow de instaladores deste repositório.
-Consulte [a configuração e a ordem de disponibilização](docs/GITHUB_ACTIONS.md).
+Tests cover configuration, Windows/Linux command construction, staging, classpaths, native libraries, versions, redaction and output preservation. They do not install applications or use real credentials.

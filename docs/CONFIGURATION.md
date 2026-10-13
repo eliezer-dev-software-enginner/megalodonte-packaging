@@ -1,18 +1,18 @@
-# Referência de packaging.toml
+# `packaging.toml` reference
 
 ```toml
 schema_version = 1
 
 [app]
-# Opcionais quando gradle.properties define appDisplayName/appName/appVersion/appMainClass/appVendor.
-name = "Meu App"
+# Optional if gradle.properties supplies appDisplayName/appName/appVersion/appMainClass/appVendor.
+name = "Example App"
 version = "1.2.3"
-main_class = "meu.app.Main"
-vendor = "Minha empresa"
-version_property = "meu.appVersion"
-icon_windows = "src/main/resources/assets/app_ico.ico"
-icon_linux = "src/main/resources/assets/app_ico.png"
-description = "Descrição"
+main_class = "example.app.Main"
+vendor = "Example Company"
+version_property = "example.appVersion"
+icon_windows = "src/main/resources/assets/app.ico"
+icon_linux = "src/main/resources/assets/app.png"
+description = "Example description"
 copyright = "Copyright 2026"
 
 [build]
@@ -22,7 +22,7 @@ jar = "build/libs/*.jar"
 
 [javafx]
 version = "25.0.1"
-# Opcional; aceita {platform} e {version}, absoluto ou relativo à raiz.
+# Optional; accepts {platform} and {version}; absolute or project-relative.
 # sdk = "java_fx_modules/{platform}-{version}"
 
 [runtime]
@@ -36,50 +36,40 @@ per_user = true
 # installer_version = "1.2.3000"
 
 [linux]
-package_name = "meu-app"
+package_name = "example-app"
 menu_group = "Office"
 
 [profiles.store]
-java_options = ["-Dmeu.microsoftStore=true"]
+java_options = ["-Dexample.microsoftStore=true"]
 
 [profiles.updater]
-launcher_name = "Meu App Updater"
-launcher_class = "meu.updater.Main"
+launcher_name = "Example App Updater"
+launcher_class = "example.updater.Main"
 jpackage_args = []
 
 [flatpak]
-manifest = "flatpak/com.empresa.MeuApp.yml"
+manifest = "flatpak/com.example.App.yml"
 ```
 
-Todos os caminhos de artefatos, staging e saída são resolvidos pela raiz do projeto;
-o diretório de invocação não interfere. Ícones e globs de JAR não podem escapar dela.
-O SDK externo pode ser indicado por javafx.sdk ou por JAVAFX_MODULES_HOME, cujo
-conteúdo deve incluir windows-25.0.1/lib ou linux-25.0.1/lib. No workspace, a biblioteca
-também procura o diretório java_fx_modules dos ancestrais.
-JAVA_HOME aponta para um JDK completo; caminhos terminados em bin são normalizados.
-No Windows, o JDK 25 de Program Files é procurado quando Java não está no PATH.
-WiX 3 pode ser encontrado em Program Files; WIX_HOME e PATH também são aceitos.
+Artifact, staging and output paths resolve from the application root, independent of the invocation directory. Icon paths and JAR globs cannot escape that root. Set the external JavaFX SDK through `javafx.sdk` or `JAVAFX_MODULES_HOME`; the latter must contain `<platform>-<version>/lib`. The library also searches ancestor `java_fx_modules` directories in a workspace. `JAVA_HOME` must point to a complete JDK; a path ending in `bin` is normalized. On Windows, a JDK 25 under Program Files is a fallback when Java is not on `PATH`. WiX 3 can be discovered under Program Files or supplied through `WIX_HOME`/`PATH`.
 
-## Modos de artefato
+## Build modes
 
-- fat-jar: um único JAR, normalmente produzido por shadowJar.
-- distribution: um JAR principal e dependências em uma distribuição Gradle.
-- classpath: JAR principal e dependências em outro diretório explícito.
+- `fat-jar`: one application JAR, usually built with Shadow.
+- `distribution`: one main JAR and dependency JARs from a Gradle distribution.
+- `classpath`: one main JAR and dependencies in an explicit directory.
 
 ```toml
 [build]
 mode = "distribution"
 tasks = ["installDist"]
-jar = "build/install/meu-app/lib/meu-app-{version}.jar"
-dependencies = "build/install/meu-app/lib/*.jar"
+jar = "build/install/example-app/lib/example-app-{version}.jar"
+dependencies = "build/install/example-app/lib/*.jar"
 ```
 
-Se dependencies for omitido, usa os JARs ao lado do principal. O manifesto do JAR
-principal recebe Class-Path com os nomes das dependências. JavaFX é retirado desse
-classpath porque seus módulos estão no runtime jlink. JARs de dependências não são
-modificados. Um JAR principal assinado não é reescrito, para evitar invalidar sua assinatura.
+If `dependencies` is omitted, sibling JARs beside the main JAR are used. The main JAR manifest receives a `Class-Path` containing the dependency names. JavaFX is excluded from that classpath because its modules live in the linked runtime. Dependency JARs are not modified. A signed main JAR is not rewritten because that would invalidate its signature.
 
-## Propriedades obtidas do ambiente
+## Runtime properties sourced from the build environment
 
 ```toml
 [[runtime.environment_properties]]
@@ -89,25 +79,12 @@ encoding = "base64"
 required = true
 ```
 
-As variáveis de ambiente têm prioridade sobre o .env do projeto. required tem
-default true e encoding aceita plain ou base64. Quebras de linha são rejeitadas.
-Os valores não aparecem em show/dry-run ou nas mensagens de erro dos comandos.
-Base64 é compatibilidade de encoding, não criptografia: valores embutidos em
-propriedades JVM podem ser lidos no launcher instalado, como no Gobitech anterior.
+Environment variables take precedence over the project's `.env`. `required` defaults to `true`; `encoding` accepts `plain` or `base64`. Newlines are rejected. Values are redacted from `show`, dry runs and command error messages. **Base64 is an encoding, not encryption.** JVM properties embedded in a launcher can be read from an installed package. Use this feature only for values safe to distribute; supply actual application secrets at runtime instead.
 
-## Versão
+## Versioning
 
-appVersion deve ter três componentes numéricos. appPatch não negativo vem de
-gradle.properties; se maior que zero, a versão de negócio recebe um quarto componente.
-No MSI, o terceiro componente é micro*1000+patch; major/minor devem ser <=255,
-micro*1000+patch <=65535 e patch <1000. O override installer_version deve ser usado
-somente com uma estratégia de versões compatível com os instaladores anteriores.
-Não mude o upgrade_uuid de um aplicativo distribuído sem planejar a migração.
+`appVersion` has three numeric components. A nonnegative `appPatch` in `gradle.properties` adds a fourth business-version component when greater than zero. MSI maps its third installer component to `micro*1000+patch`; `major` and `minor` must be at most 255, the mapped component at most 65535, and `patch` below 1000. Override `installer_version` only with a compatible upgrade strategy. Do not change an already distributed application's `upgrade_uuid` without a migration plan.
 
-## Launchers e Flatpak
+## Additional launchers and Flatpak
 
-Um perfil updater exige que launcher_class exista no JAR principal. A biblioteca
-não implementa um updater Java nem cria classes ausentes.
-Flatpak exige um manifesto já existente e flatpak/flatpak-builder no Linux. Os
-arquivos auxiliares do diretório flatpak são copiados para o staging; o app-image
-gerado é incluído ali. --install-flatpak é necessário para instalação local.
+An updater profile requires `launcher_class` to exist in the main JAR. The packaging library does not implement updater logic or generate missing Java classes. Flatpak requires an existing manifest plus `flatpak` and `flatpak-builder` on Linux. Auxiliary files under `flatpak/` are copied to staging beside the generated application image. `--install-flatpak` is required for local installation.
