@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from megalodonte_packaging.ci import clone, metadata, prepare
+from megalodonte_packaging.ci import FRAMEWORK_LIBRARIES, clone, metadata, prepare
 
 
 class CiTests(unittest.TestCase):
@@ -21,11 +21,11 @@ class CiTests(unittest.TestCase):
         with patch("megalodonte_packaging.ci.clone") as checkout, patch("megalodonte_packaging.ci.run") as run:
             prepare(self.root, ["disgust", "script-app", "simple-clipboard"])
         self.assertEqual([call.args[0] for call in checkout.call_args_list], [
-            "megalodonte-libs", "pack-utilities", "disgust-components", "megalodonte-jsonc-ui",
+            *FRAMEWORK_LIBRARIES, "pack-utilities", "disgust-components", "megalodonte-jsonc-ui",
             "megalodonte-script-app", "megalodonte-simple-clipboard"])
-        self.assertTrue(checkout.call_args_list[0].kwargs["submodules"])
-        self.assertEqual(run.call_args_list[1].args[0][-4:-2], ["test", "publishToMavenLocal"])
-        self.assertIn(":disgust-icons:publishToMavenLocal", run.call_args_list[2].args[0])
+        self.assertTrue(all(not call.kwargs.get("submodules") for call in checkout.call_args_list))
+        self.assertEqual(run.call_args_list[len(FRAMEWORK_LIBRARIES)].args[0][-4:-2], ["test", "publishToMavenLocal"])
+        self.assertIn(":disgust-icons:publishToMavenLocal", run.call_args_list[len(FRAMEWORK_LIBRARIES) + 1].args[0])
 
     def test_unknown_dependency_is_rejected_before_checkout(self):
         with patch("megalodonte_packaging.ci.clone") as checkout:

@@ -50,7 +50,7 @@ def configure(workspace):
     world = workspace / "megalodonte-world"
     clients = [
         (world / "applications/plics-sw", "plics-sw", "pack-utilities disgust jsonc-ui", True, False),
-        (world / "applications/gobitech-pesagem", "gobitech", "pack-utilities", True, True),
+        (world / "applications/gobitech-pesagem", "gobitech", "pack-utilities jsonc-ui", True, True),
         (world / "nojo-engine-ui-creator", "nojo-engine-ui-creator", "pack-utilities", False, False),
         (world / "applications/Everest", "everest", "", False, False),
         (world / "applications/megalodonte-cliente", "megalodonte-cliente", "script-app", False, False),

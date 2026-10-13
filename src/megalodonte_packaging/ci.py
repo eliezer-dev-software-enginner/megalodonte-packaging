@@ -8,6 +8,15 @@ from .config import load_config
 
 
 OWNER = "eliezer-dev-software-enginner"
+FRAMEWORK_LIBRARIES = (
+    "megalodonte-core",
+    "megalodonte-reactivity-portable",
+    "megalodonte-base",
+    "megalodonte-reactivity",
+    "megalodonte-theme",
+    "megalodonte-router",
+    "megalodonte-components",
+)
 DEPENDENCIES = {
     "pack-utilities": ("pack-utilities", ["test", "publishToMavenLocal"]),
     "disgust": ("disgust-components", ["publishToMavenLocal", ":disgust-icons:publishToMavenLocal"]),
@@ -41,10 +50,11 @@ def prepare(workspace: Path, dependencies: list[str]):
     if "script-app" in selected:
         selected.add("jsonc-ui")
     workspace.mkdir(parents=True, exist_ok=True)
-    libs = workspace / "megalodonte-libs"
-    clone("megalodonte-libs", libs, submodules=True)
-    run(["pwsh", "-NoProfile", "-File", str(libs / "install-all.ps1")] if os.name == "nt"
-        else ["bash", str(libs / "install-all.sh")], libs)
+    for repository in FRAMEWORK_LIBRARIES:
+        directory = workspace / repository
+        clone(repository, directory)
+        wrapper = [str(directory / "gradlew.bat")] if os.name == "nt" else ["bash", str(directory / "gradlew")]
+        run([*wrapper, "build", "publishToMavenLocal", "--no-daemon", "--console=plain"], directory)
     # Dependency order matters: utilities -> Disgust, JSONC -> script launcher.
     for name, (repository, tasks) in DEPENDENCIES.items():
         if name not in selected:
