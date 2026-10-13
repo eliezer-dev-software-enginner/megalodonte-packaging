@@ -24,8 +24,7 @@ def load_shared_library():
         candidates = [Path(override).resolve() / "src"]
     else:
         candidates = [candidate for parent in (ROOT, *ROOT.parents)
-                      for candidate in (parent / "megalodonte-packaging/src",
-                                        parent / "megalodonte-world/megalodonte-packaging/src")]
+                      for candidate in (parent / "framework/megalodonte-packaging/src",)]
     source = next((p for p in candidates if (p / "megalodonte_packaging").is_dir()), None)
     if override and source is None:
         raise SystemExit("MEGALODONTE_PACKAGING_HOME does not contain the shared library")
@@ -58,7 +57,7 @@ def app_specs(workspace):
     specs = []
     legacy_uuid = "e3a2b1c4-7d5f-4a8e-9c6b-2f1d0a3e7b8c"
     for name in ("plics-sw", "gobitech-pesagem", "nojo-engine-ui-creator"):
-        specs.append(dict(root=world / name, version_property="gobitech.appVersion" if name == "gobitech-pesagem" else "plics.appVersion",
+        specs.append(dict(root=world / "applications" / name, version_property="gobitech.appVersion" if name == "gobitech-pesagem" else "plics.appVersion",
                           upgrade_uuid=legacy_uuid, icons=True, store=name != "gobitech-pesagem",
                           flatpak="io.github.eliezerdevsoftwareenginner.gobitech" if name == "gobitech-pesagem" else "io.github.eliezerdevsoftwareenginner.PlicsSW",
                           credentials=name == "gobitech-pesagem", updater=False))
@@ -66,16 +65,16 @@ def app_specs(workspace):
              ("megalodonte-app3-string-lenght", "Megalodonte String Length"), ("megalodonte-app4-hide-seek", "Megalodonte Hide Seek"),
              ("megalodonte-app5-todo-list", "Megalodonte Todo List")]
     for name, display in demos:
-        specs.append(dict(root=world / "megalodonte-ecossystem" / name, display=display, icons=True, updater=True,
+        specs.append(dict(root=world / "framework/megalodonte-ecossystem" / name, display=display, icons=True, updater=True,
                           upgrade_uuid=str(uuid.uuid5(uuid.NAMESPACE_URL, "megalodonte:" + name))))
-    specs.append(dict(root=world / "Everest", icon_linux="src/main/resources/assets/Logo.png"))
-    specs.append(dict(root=world / "megalodonte-declarative/megalodonte-cliente", display="Megalodonte Cliente", version="0.1.0",
+    specs.append(dict(root=world / "applications/Everest", icon_linux="src/main/resources/assets/Logo.png"))
+    specs.append(dict(root=world / "applications/megalodonte-cliente", display="Megalodonte Cliente", version="0.1.0",
                       main="megalodonte.script.ScriptLauncher", mode="distribution", tasks=["installDist"],
                       jar="build/install/megalodonte-cliente/lib/megalodonte-cliente-{version}.jar"))
     specs.append(dict(root=workspace / "ftp-file-pusher", display="adb_file_pusher", version="1.0.0", main="my_app.Main",
                       mode="classpath", tasks=["jar", "copyDependencies"], jar="build/libs/adb-file-pusher-{version}.jar",
                       dependencies="build/dependencies/*.jar", icon_linux="src/main/resources/logo_256x256.png"))
-    specs.append(dict(root=world / "disgust/disgust-ui", display="Disgust UI", version="1.0.0", main="disgust.ui.Main",
+    specs.append(dict(root=world / "applications/disgust/disgust-ui", display="Disgust UI", version="1.0.0", main="disgust.ui.Main",
                       mode="distribution", tasks=[":disgust-ui:installDist"],
                       jar="build/install/disgust-ui/lib/disgust-ui-*.jar"))
     return specs

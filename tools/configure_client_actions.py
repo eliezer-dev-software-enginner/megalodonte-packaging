@@ -49,18 +49,18 @@ def remove_module_workaround(text):
 def configure(workspace):
     world = workspace / "megalodonte-world"
     clients = [
-        (world / "plics-sw", "plics-sw", "pack-utilities disgust", True, False),
-        (world / "gobitech-pesagem", "gobitech", "pack-utilities", True, True),
+        (world / "applications/plics-sw", "plics-sw", "pack-utilities disgust jsonc-ui", True, False),
+        (world / "applications/gobitech-pesagem", "gobitech", "pack-utilities", True, True),
         (world / "nojo-engine-ui-creator", "nojo-engine-ui-creator", "pack-utilities", False, False),
-        (world / "Everest", "everest", "", False, False),
-        (world / "megalodonte-declarative/megalodonte-cliente", "megalodonte-cliente", "script-app", False, False),
+        (world / "applications/Everest", "everest", "", False, False),
+        (world / "applications/megalodonte-cliente", "megalodonte-cliente", "script-app", False, False),
         (workspace / "ftp-file-pusher", "ftp-file-pusher", "simple-clipboard", False, False),
     ]
     for root, name, dependencies, smoke, credentials in clients:
         target = root / ".github/workflows/package.yml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(client_workflow(name, dependencies=dependencies, smoke=smoke, credentials=credentials), encoding="utf-8")
-    ecosystem = world / "megalodonte-ecossystem"
+    ecosystem = world / "framework/megalodonte-ecossystem"
     demos = ["megalodonte-app1-welcome", "megalodonte-app2-counter", "megalodonte-app3-string-lenght",
              "megalodonte-app4-hide-seek", "megalodonte-app5-todo-list"]
     matrix = client_workflow("${{ matrix.app }}", "${{ matrix.app }}", release=False)
@@ -68,7 +68,7 @@ def configure(workspace):
     target = ecosystem / ".github/workflows/package.yml"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(matrix, encoding="utf-8")
-    disgust = world / "disgust"
+    disgust = world / "applications/disgust"
     target = disgust / ".github/workflows/package.yml"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(client_workflow("disgust-ui", "disgust-ui", "pack-utilities", release=False), encoding="utf-8")

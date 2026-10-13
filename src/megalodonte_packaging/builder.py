@@ -273,7 +273,7 @@ class Packager:
             return Path(installed).resolve()
         arch = host_platform.machine()
         for parent in (self.config.root, *self.config.root.parents):
-            candidate = parent / "megalodonte-declarative/megalodonte-engine/build/tools" / f"appimagetool-{arch}.AppImage"
+            candidate = parent / "applications/megalodonte-engine/build/tools" / f"appimagetool-{arch}.AppImage"
             if candidate.is_file():
                 return candidate
         raise ValueError("Set APPIMAGETOOL to an existing appimagetool or install it on PATH")
