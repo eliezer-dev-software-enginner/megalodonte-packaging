@@ -23,7 +23,6 @@ class CiTests(unittest.TestCase):
         self.assertEqual([call.args[0] for call in checkout.call_args_list], [
             *FRAMEWORK_LIBRARIES, "pack-utilities", "disgust-components", "megalodonte-jsonc-ui",
             "megalodonte-script-app", "megalodonte-simple-clipboard"])
-        self.assertTrue(all(not call.kwargs.get("submodules") for call in checkout.call_args_list))
         self.assertEqual(run.call_args_list[len(FRAMEWORK_LIBRARIES)].args[0][-4:-2], ["test", "publishToMavenLocal"])
         self.assertIn(":disgust-icons:publishToMavenLocal", run.call_args_list[len(FRAMEWORK_LIBRARIES) + 1].args[0])
 

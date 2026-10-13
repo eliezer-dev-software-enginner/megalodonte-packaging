@@ -31,6 +31,7 @@ env:
   ORG_GRADLE_PROJECT_useLocalSources: 'false'
   PACKAGING_SOURCE: ${{ vars.MEGALODONTE_PACKAGING_SOURCE || 'git+https://github.com/eliezer-dev-software-enginner/megalodonte-packaging.git@main' }}
   JAVAFX_MODULES_ZIP_URL: https://github.com/eliezer-dev-software-enginner/megalodonte-base/releases/download/utilities/java_fx_modules.zip
+  APPIMAGE_EXTRACT_AND_RUN: '1'
 
 jobs:
   package:
@@ -41,6 +42,9 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             kind: deb
+          - os: ubuntu-latest
+            platform: appimage
+            kind: appimage
           - os: windows-latest
             platform: windows
             kind: msi
@@ -88,6 +92,14 @@ jobs:
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/jfx.zip" "$JAVAFX_MODULES_ZIP_URL"
           unzip -q "$RUNNER_TEMP/jfx.zip" -d "$RUNNER_TEMP/java_fx_modules"
           echo "JAVAFX_MODULES_HOME=$RUNNER_TEMP/java_fx_modules" >> "$GITHUB_ENV"
+      - name: Download AppImage packaging tool
+        if: matrix.kind == 'appimage'
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/appimagetool-x86_64.AppImage" \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool-x86_64.AppImage"
+          echo "APPIMAGETOOL=$RUNNER_TEMP/appimagetool-x86_64.AppImage" >> "$GITHUB_ENV"
       - name: Build and publish dependencies to Maven local
         shell: bash
         env:
@@ -118,6 +130,7 @@ jobs:
           path: |
             ${{ inputs.project-directory }}/dist/*.deb
             ${{ inputs.project-directory }}/dist/*.msi
+            ${{ inputs.project-directory }}/dist/*.AppImage
           if-no-files-found: error
 
   release:
@@ -139,4 +152,5 @@ jobs:
           files: |
             artifacts/**/*.deb
             artifacts/**/*.msi
+            artifacts/**/*.AppImage
           fail_on_unmatched_files: true

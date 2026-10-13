@@ -30,10 +30,8 @@ def run(command, cwd):
     subprocess.run(command, cwd=cwd, check=True)
 
 
-def clone(repository, destination, *, submodules=False):
+def clone(repository, destination):
     command = ["git", "clone", "--depth", "1"]
-    if submodules:
-        command += ["--recurse-submodules"]
     ref = os.environ.get("CI_REF_" + repository.upper().replace("-", "_"))
     if ref:
         command += ["--branch", ref]
