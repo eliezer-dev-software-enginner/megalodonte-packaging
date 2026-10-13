@@ -80,7 +80,7 @@ jobs:
       - name: Install WiX
         if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install wixtoolset --version=3.14.1 -y
+        run: choco install wixtoolset -y
       - name: Download JavaFX SDKs
         shell: bash
         run: |
