@@ -10,7 +10,6 @@ from .config import load_config
 OWNER = "eliezer-dev-software-enginner"
 FRAMEWORK_LIBRARIES = (
     "megalodonte-core",
-    "megalodonte-reactivity-portable",
     "megalodonte-base",
     "megalodonte-reactivity",
     "megalodonte-theme",

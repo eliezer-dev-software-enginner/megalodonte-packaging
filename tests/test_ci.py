@@ -26,6 +26,9 @@ class CiTests(unittest.TestCase):
         self.assertEqual(run.call_args_list[len(FRAMEWORK_LIBRARIES)].args[0][-4:-2], ["test", "publishToMavenLocal"])
         self.assertIn(":disgust-icons:publishToMavenLocal", run.call_args_list[len(FRAMEWORK_LIBRARIES) + 1].args[0])
 
+    def test_desktop_ci_does_not_clone_the_private_portable_library(self):
+        self.assertNotIn("megalodonte-reactivity-portable", FRAMEWORK_LIBRARIES)
+
     def test_unknown_dependency_is_rejected_before_checkout(self):
         with patch("megalodonte_packaging.ci.clone") as checkout:
             with self.assertRaises(ValueError):
