@@ -1,10 +1,11 @@
-"""Apply shared Actions and Maven-local utilities coordinates to the twelve clients."""
+"""Generate one client workflow, or replay the historical workspace migration."""
 import argparse
 from pathlib import Path
 
 
 OWNER = "eliezer-dev-software-enginner"
 WORKFLOW = f"{OWNER}/megalodonte-packaging/.github/workflows/package-javafx.yml@main"
+DEPENDENCIES = {"pack-utilities", "disgust", "jsonc-ui", "script-app", "simple-clipboard"}
 
 
 def client_workflow(name, directory=".", dependencies="", release=True, smoke=False, credentials=False):
@@ -33,6 +34,21 @@ jobs:
       release: {str(release).lower()}
       smoke-test: {str(smoke).lower()}
 {secret_section}"""
+
+
+def configure_client(project, artifact, dependencies="", smoke=True, release=True, force=False):
+    """Create the standard caller without replacing a hand-maintained workflow."""
+    unknown = set(dependencies.split()) - DEPENDENCIES
+    if unknown:
+        raise ValueError(f"Unknown dependencies: {', '.join(sorted(unknown))}")
+    if not (project / "packaging.toml").is_file() or not (project / "scripts/package.py").is_file():
+        raise ValueError("Project needs packaging.toml and scripts/package.py")
+    target = project / ".github/workflows/package.yml"
+    if target.exists() and not force:
+        raise FileExistsError(f"Workflow already exists: {target}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(client_workflow(artifact, dependencies=dependencies, release=release, smoke=smoke), encoding="utf-8")
+    return target
 
 
 def remove_module_workaround(text):
@@ -93,5 +109,19 @@ def configure(workspace):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workspace", type=Path, required=True)
-    configure(parser.parse_args().workspace.resolve())
+    location = parser.add_mutually_exclusive_group(required=True)
+    location.add_argument("--workspace", type=Path, help="Replay the historical multi-project migration")
+    location.add_argument("--project", type=Path, help="Create one standard application workflow")
+    parser.add_argument("--artifact", help="Artifact name for --project")
+    parser.add_argument("--dependencies", default="", help="Space-separated extra Megalodonte dependencies")
+    parser.add_argument("--no-smoke-test", action="store_true")
+    parser.add_argument("--no-release", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Replace an existing workflow")
+    args = parser.parse_args()
+    if args.project:
+        if not args.artifact:
+            parser.error("--artifact is required with --project")
+        print(configure_client(args.project.resolve(), args.artifact, args.dependencies,
+                               not args.no_smoke_test, not args.no_release, args.force))
+    else:
+        configure(args.workspace.resolve())
