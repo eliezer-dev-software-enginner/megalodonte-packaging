@@ -2,7 +2,7 @@
 
 The reusable [package-javafx.yml](../.github/workflows/package-javafx.yml) workflow builds MSI on Windows and AppImage and DEB on Linux. A caller supplies its project directory, artifact prefix, optional extra source dependencies, release flag and Linux smoke-test flag.
 
-For a new application, create `packaging.toml` and the thin `scripts/package.py` adapter, then generate the caller before the first commit:
+For a new application, create `packaging.toml`, then generate the caller before the first commit. A local script adapter is optional; the shared CLI accepts `--project` directly:
 
 ```bash
 python tools/configure_client_actions.py --project /path/to/app --artifact my-application --dependencies 'script-app'

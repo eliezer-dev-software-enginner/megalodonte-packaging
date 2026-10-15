@@ -1,11 +1,11 @@
 # Migration to the shared packaging library
 
-Earlier application repositories contained independent Python scripts for configuration and native installer creation. The shared library now owns the pipeline. Existing `create-msi.py`, `create-deb.py`, `create-flatpak.py` and version helpers can remain as thin adapters while callers migrate to `scripts/package.py`. Application database tools, development servers and simulators are outside this migration.
+Earlier application repositories contained independent Python scripts for configuration and native installer creation. The shared library now owns the pipeline. Existing `create-msi.py`, `create-deb.py`, `create-flatpak.py` and version helpers can remain as thin adapters while callers migrate to the shared `megalodonte-package --project /path/to/app` command. Application database tools, development servers and simulators are outside this migration.
 
 ## Application migration checklist
 
 1. Add `packaging.toml` with `schema_version = 1`, a stable application name, main class, build mode, JavaFX version and native icon paths.
-2. Replace copied packaging algorithms with an adapter that calls `megalodonte_packaging.cli.main` for the application root. Keep application-specific runtime options in TOML.
+2. Replace copied packaging algorithms with the shared CLI. A convenience adapter may call `megalodonte_packaging.cli.main` for the application root; keep application-specific runtime options in TOML.
 3. Preserve the existing Windows `upgrade_uuid` and the intended installer-version sequence. An accidental change can break upgrades of previously installed versions.
 4. Declare extra launchers only when their classes are present in the main JAR. Keep Flatpak manifest and application IDs aligned with the existing distribution.
 5. Validate `show` and `--dry-run` on both platforms, then build the native installers on their respective hosts. Check that the application starts and its runtime configuration resolves correctly.
