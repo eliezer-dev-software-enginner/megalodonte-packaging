@@ -61,6 +61,11 @@ java_options = ["-Dexample.store=true"]
     def builder(self, platform="windows", profile="default"):
         return Packager(load_config(self.root), profile, platform)
 
+    def test_ci_disables_local_composite_builds_on_both_platforms(self):
+        with patch.dict(os.environ, {"ORG_GRADLE_PROJECT_useLocalSources": "false"}):
+            for platform in ("windows", "linux"):
+                self.assertIn("-PuseLocalSources=false", self.builder(platform).gradle_command())
+
     def test_identity_versions_and_profiles(self):
         builder = self.builder(profile="store")
         (self.root / "gradle.properties").write_text("appVersion=9.9.9\nappPatch=2\n")

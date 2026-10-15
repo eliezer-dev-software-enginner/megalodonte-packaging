@@ -106,7 +106,12 @@ class Packager:
         if not wrapper.is_file():
             wrapper = next((parent / wrapper.name for parent in self.config.root.parents if (parent / wrapper.name).is_file()), wrapper)
         tasks = self.config.build.get("tasks", ["clean", "shadowJar"])
-        return ([str(wrapper)] if self.platform == "windows" else ["bash", str(wrapper)]) + tasks
+        command = [str(wrapper)] if self.platform == "windows" else ["bash", str(wrapper)]
+        if os.environ.get("ORG_GRADLE_PROJECT_useLocalSources") == "false":
+            # Pass explicitly: Windows Gradle does not reliably expose this environment
+            # property while evaluating settings.gradle.kts in GitHub Actions.
+            command.append("-PuseLocalSources=false")
+        return command + tasks
 
     def find_jar(self) -> Path:
         pattern = self.config.build.get("jar", "build/libs/*.jar").format(version=self.config.version)
