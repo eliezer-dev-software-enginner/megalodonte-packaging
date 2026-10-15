@@ -91,7 +91,7 @@ class Packager:
             raise RuntimeError(f"{Path(command[0]).name} failed (exit {error.returncode})") from None
 
     def java_options(self, *, redact: bool = False) -> list[str]:
-        options = ["--enable-native-access=ALL-UNNAMED", "--add-modules=javafx.controls"]
+        options = ["--enable-native-access=javafx.graphics,ALL-UNNAMED", "--add-modules=javafx.controls"]
         version_property = self.config.app.get("version_property")
         if version_property:
             options.append(f"-D{version_property}={self.config.version}")

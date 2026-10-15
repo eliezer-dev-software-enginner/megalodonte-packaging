@@ -15,19 +15,19 @@ Cross-packaging is not supported. The JavaFX SDK version must match the applicat
 
 ## Workspace use
 
-From an application repository that has `packaging.toml` and `scripts/package.py`:
-
-```sh
-python scripts/package.py show
-python scripts/package.py build appimage --run
-python scripts/package.py build deb
-python scripts/package.py build msi --dry-run --platform windows
-```
-
-The adapter discovers the shared checkout, or uses `MEGALODONTE_PACKAGING_HOME` when set. Outside this workspace, install the library in a virtual environment:
+Install this checkout once and run the shared command from any application repository with `packaging.toml`:
 
 ```sh
 python -m pip install -e /path/to/megalodonte-packaging
+megalodonte-package --project . show
+megalodonte-package --project . build appimage --run
+megalodonte-package --project . build deb
+megalodonte-package --project . build msi --dry-run --platform windows
+```
+
+Use an absolute application path from any working directory:
+
+```sh
 megalodonte-package --project /path/to/application show
 megalodonte-package --project /path/to/application build deb
 ```
@@ -37,14 +37,14 @@ megalodonte-package --project /path/to/application build deb
 ## Commands and options
 
 ```sh
-python scripts/package.py build appimage --run
-python scripts/package.py build app-image
-python scripts/package.py build deb
-python scripts/package.py build msi
-python scripts/package.py build msi --profile store
-python scripts/package.py build flatpak --install-flatpak
-python scripts/package.py version patch
-python scripts/package.py version release 1.2.0
+megalodonte-package --project . build appimage --run
+megalodonte-package --project . build app-image
+megalodonte-package --project . build deb
+megalodonte-package --project . build msi
+megalodonte-package --project . build msi --profile store
+megalodonte-package --project . build flatpak --install-flatpak
+megalodonte-package --project . version patch
+megalodonte-package --project . version release 1.2.0
 ```
 
 Profiles must be declared by the application. `--dry-run` prints commands without building, deleting files or reading credentials. `--platform windows|linux` is available only with `--dry-run`. `--skip-build` reuses a Gradle output; `--smoke-test` briefly launches the generated runtime; `--keep-work` retains staging. `--open` opens the output directory outside CI. `--run` launches an AppImage and writes `dist/appimage-run.log`. `--install-flatpak` explicitly allows local installation; the default only builds.
