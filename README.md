@@ -8,10 +8,12 @@ The [codebase guide](docs/CODEBASE.md) maps each Python module to its responsibi
 
 | Build host | Outputs | Required tools |
 | --- | --- | --- |
-| Linux | AppImage, DEB, Flatpak, application image | Python 3.11+, JDK with JMODs, matching JavaFX SDK; AppImage needs `appimagetool`, DEB needs `fakeroot`, Flatpak needs Flatpak Builder |
+| Linux | AppImage, DEB, Flatpak, application image | Python 3.11+, JDK with JMODs, matching JavaFX SDK; AppImage needs `appimagetool`, DEB needs `fakeroot`, Flatpak needs `flatpak` and `flatpak-builder` |
 | Windows | MSI | Python 3.11+, JDK with JMODs, matching JavaFX SDK, WiX Toolset |
 
 Cross-packaging is not supported. The JavaFX SDK version must match the application's `packaging.toml`. The library has no Python runtime dependencies.
+
+The application repository needs a `packaging.toml` and a build that produces the configured application JAR or distribution. A Gradle wrapper (`gradlew` on Linux or `gradlew.bat` on Windows) must be in the application root or an ancestor directory. Set `JAVA_HOME` to a complete JDK and configure the JavaFX SDK through `javafx.sdk` or `JAVAFX_MODULES_HOME` as described in the [configuration reference](docs/CONFIGURATION.md). Flatpak builds also require an existing manifest declared in `packaging.toml`.
 
 ## Workspace use
 
@@ -48,6 +50,8 @@ megalodonte-package --project . version release 1.2.0
 ```
 
 Profiles must be declared by the application. `--dry-run` prints commands without building, deleting files or reading credentials. `--platform windows|linux` is available only with `--dry-run`. `--skip-build` reuses a Gradle output; `--smoke-test` briefly launches the generated runtime; `--keep-work` retains staging. `--open` opens the output directory outside CI. `--run` launches an AppImage and writes `dist/appimage-run.log`. `--install-flatpak` explicitly allows local installation; the default only builds.
+
+`version patch` increments `appPatch` in the application's `gradle.properties`. `version release X.Y.Z` sets `appVersion` and resets `appPatch` to zero in that file.
 
 ## Configuration
 
