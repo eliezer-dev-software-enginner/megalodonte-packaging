@@ -203,15 +203,23 @@ java_options = ["-Dexample.store=true"]
                 (image / "bin").mkdir(parents=True)
                 (image / "bin/Sample").touch()
             if name == "appimagetool":
-                Path(command[-1]).write_text("appimage")
+                profile = "store" if "appimage-store" in Path(command[-2]).parts else "default"
+                Path(command[-1]).write_text(profile)
             return subprocess.CompletedProcess(command, 0)
         with patch.dict(os.environ, {"APPIMAGETOOL": str(tool)}), patch.object(builder, "run", side_effect=run):
             first = builder.package("appimage", skip_build=True)
             self.assertEqual(first.name, "Sample-1.2.3-" + __import__("platform").machine() + ".AppImage")
-            self.assertEqual(first.read_text(), "appimage")
+            self.assertEqual(first.read_text(), "default")
             second = builder.package("appimage", skip_build=True)
             self.assertEqual(second, first)
             self.assertFalse(builder.workspace("appimage").exists())
+            store_builder = self.builder(platform="linux", profile="store")
+            with patch.object(store_builder, "run", side_effect=run):
+                store = store_builder.package("appimage", skip_build=True)
+            self.assertEqual(store.name, "Sample-1.2.3-store-" + __import__("platform").machine() + ".AppImage")
+            self.assertEqual(first.read_text(), "default")
+            self.assertEqual(store.read_text(), "store")
+            self.assertTrue(store.is_file())
 
     def test_version_bump_preserves_other_properties_and_comments(self):
         (self.root / "gradle.properties").write_text("# keep\nappVersion=1.2.3\nappPatch=0\nappName=sample\n")

@@ -287,6 +287,7 @@ class Packager:
         return [str(self.appimagetool()), "--no-appstream", "--mksquashfs-opt", "-processors", "--mksquashfs-opt", "2", str(appdir), str(output)]
 
     def build_appimage(self, work: Path, image: Path, destination: Path) -> Path:
+        """Assemble an AppImage using the selected profile in its output filename."""
         appdir = work / "AppDir"
         shutil.copytree(image, appdir)
         launcher = appdir / "bin" / self.config.name
@@ -305,7 +306,8 @@ class Packager:
         else:
             raise ValueError("AppImage requires app.icon_linux (PNG or SVG)")
         shutil.copy2(appdir / ("megalodonte" + Path(icon).suffix.lower()), appdir / ".DirIcon")
-        final = destination / f"{self.config.name}-{self.config.version}-{host_platform.machine()}.AppImage"
+        profile_suffix = "" if self.profile_name == "default" else f"-{self.profile_name}"
+        final = destination / f"{self.config.name}-{self.config.version}{profile_suffix}-{host_platform.machine()}.AppImage"
         temporary = final.with_name(final.name + ".tmp")
         if temporary.exists():
             temporary.unlink()
