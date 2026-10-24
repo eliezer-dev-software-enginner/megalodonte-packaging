@@ -73,7 +73,7 @@ For MSI, the three-field installer version maps `major.minor.micro` plus an opti
 
 ## Continuous integration
 
-The reusable [JavaFX package workflow](.github/workflows/package-javafx.yml) builds on Linux and Windows. Applications call it from their own repository; `MEGALODONTE_PACKAGING_SOURCE` can point to a pinned Git revision or a published wheel. Without that variable, the workflow installs this repository's `main` branch. The workflow uses the WiX version available on the Windows runner, avoiding a downgrade of an already installed toolset. See [GitHub Actions integration](docs/GITHUB_ACTIONS.md).
+The reusable [JavaFX package workflow](.github/workflows/package-javafx.yml) defines DEB and MSI jobs on GitHub-hosted Linux and Windows runners. Its AppImage job uses the `appimage` runner label, which requires an available runner with that label. Applications call the workflow from their own repository; `MEGALODONTE_PACKAGING_SOURCE` can point to a pinned Git revision or a published wheel. Without that variable, the workflow installs this repository's `main` branch. The workflow uses the WiX version available on the Windows runner, avoiding a downgrade of an already installed toolset. See [GitHub Actions integration](docs/GITHUB_ACTIONS.md).
 
 ## Tests
 
@@ -82,3 +82,7 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
 Tests cover configuration, Windows/Linux command construction, staging, classpaths, native libraries, versions, redaction and output preservation. They do not install applications or use real credentials.
+
+## License
+
+No license file or license declaration is included in this repository. Confirm the intended license with the project maintainer before distributing or reusing the code.
