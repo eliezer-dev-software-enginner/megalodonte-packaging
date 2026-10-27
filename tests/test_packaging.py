@@ -12,7 +12,6 @@ import zipfile
 
 from megalodonte_packaging import load_config, Packager
 from megalodonte_packaging.cli import main, bump_version
-from megalodonte_packaging.credentials import environment_options
 
 
 class PackagingTests(unittest.TestCase):
@@ -130,13 +129,13 @@ java_options = ["-Dexample.store=true"]
         self.assertIn("--linux-package-name", commands["jpackage"])
         self.assertFalse((self.root / ".packaging").exists())
 
-    def test_credentials_are_generic_redacted_and_not_copied(self):
+    def test_runtime_secrets_cannot_be_embedded_by_environment_properties(self):
         (self.root / ".env").write_text("SECRET_KEY='local secret'\n")
-        definitions = [{"environment": "SECRET_KEY", "property": "example.password", "encoding": "base64"}]
-        with patch.dict(os.environ, {"SECRET_KEY": "from environment"}):
-            self.assertEqual(environment_options(self.root, definitions), ["-Dexample.password=ZnJvbSBlbnZpcm9ubWVudA=="])
-        redacted = environment_options(self.root, definitions, redact=True)
-        self.assertEqual(redacted, ["-Dexample.password=<from:SECRET_KEY>"])
+        manifest=self.root / "packaging.toml"
+        manifest.write_text(manifest.read_text()+"\n[[runtime.environment_properties]]\nenvironment='SECRET_KEY'\nproperty='example.password'\n")
+        with self.assertRaises(ValueError):
+            load_config(self.root)
+        manifest.write_text(manifest.read_text().split("\n[[runtime.environment_properties]]")[0])
         self.jar()
         work = self.builder().workspace("msi")
         self.builder().prepare_input(work)

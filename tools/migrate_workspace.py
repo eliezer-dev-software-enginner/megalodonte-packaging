@@ -60,7 +60,7 @@ def app_specs(workspace):
         specs.append(dict(root=world / "applications" / name, version_property="gobitech.appVersion" if name == "gobitech-pesagem" else "plics.appVersion",
                           upgrade_uuid=legacy_uuid, icons=True, store=name != "gobitech-pesagem",
                           flatpak="io.github.eliezerdevsoftwareenginner.gobitech" if name == "gobitech-pesagem" else "io.github.eliezerdevsoftwareenginner.PlicsSW",
-                          credentials=name == "gobitech-pesagem", updater=False))
+                          updater=False))
     demos = [("megalodonte-app1-welcome", "Megalodonte Welcome"), ("megalodonte-app2-counter", "Megalodonte Counter"),
              ("megalodonte-app3-string-lenght", "Megalodonte String Length"), ("megalodonte-app4-hide-seek", "Megalodonte Hide Seek"),
              ("megalodonte-app5-todo-list", "Megalodonte Todo List")]
@@ -104,9 +104,6 @@ def write_project(spec):
     lines.extend(["", "[javafx]", 'version = "25.0.1"', "", "[runtime]",
                   'modules = ["javafx.controls", "java.sql", "jdk.zipfs", "java.logging", "java.xml", "jdk.charsets"]',
                   'exclude_natives = ["jfxwebkit.dll"]'])
-    if spec.get("credentials"):
-        for env, prop in (("GOBITECH_ADMIN_LOGIN", "gobitech.adminLoginBase64"), ("GOBITECH_ADMIN_PASSWORD", "gobitech.adminPasswordBase64")):
-            lines.extend(["", "[[runtime.environment_properties]]", f"environment = {quoted(env)}", f"property = {quoted(prop)}", 'encoding = "base64"', "required = true"])
     lines.extend(["", "[windows]", "upgrade_uuid = " + quoted(spec.get("upgrade_uuid", str(uuid.uuid5(uuid.NAMESPACE_URL, "megalodonte:" + root.name)))),
                   "per_user = true", "", "[linux]", "package_name = " + quoted(root.name.lower()), 'menu_group = "Office"'])
     if spec.get("flatpak"):

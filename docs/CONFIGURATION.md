@@ -69,17 +69,9 @@ dependencies = "build/install/example-app/lib/*.jar"
 
 If `dependencies` is omitted, sibling JARs beside the main JAR are used. The main JAR manifest receives a `Class-Path` containing the dependency names. JavaFX is excluded from that classpath because its modules live in the linked runtime. Dependency JARs are not modified. A signed main JAR is not rewritten because that would invalidate its signature.
 
-## Runtime properties sourced from the build environment
+## Runtime credentials
 
-```toml
-[[runtime.environment_properties]]
-environment = "MY_ADMIN_LOGIN"
-property = "my.adminLoginBase64"
-encoding = "base64"
-required = true
-```
-
-Environment variables take precedence over the project's `.env`. `required` defaults to `true`; `encoding` accepts `plain` or `base64`. Newlines are rejected. Values are redacted from `show`, dry runs and command error messages. **Base64 is an encoding, not encryption.** JVM properties embedded in a launcher can be read from an installed package. Use this feature only for values safe to distribute; supply actual application secrets at runtime instead.
+The packaging configuration does not accept `runtime.environment_properties`. Never bake credentials into launcher `-D` options: both plain text and Base64 values can be extracted from an installer. Applications should read process environment variables or a private per-user `.env` at runtime. The shared `megalodonte.config.RuntimeEnvironment` helper resolves `%APPDATA%/Megalodonte/<app>/.env` on Windows and `~/.config/megalodonte/<app>/.env` on Linux (respecting `XDG_CONFIG_HOME`). A project-root `.env` is accepted only while running from a source checkout with `packaging.toml`. The build workflow does not need application credentials.
 
 ## Versioning
 

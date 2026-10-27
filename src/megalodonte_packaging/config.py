@@ -117,7 +117,7 @@ def load_config(root: Path | str) -> PackageConfig:
     fields = {
         "app": {"name", "version", "main_class", "vendor", "version_property", "icon_windows", "icon_linux", "description", "copyright"},
         "build": {"mode", "tasks", "jar", "dependencies"}, "javafx": {"version", "sdk"},
-        "runtime": {"modules", "java_options", "environment_properties", "exclude_natives"},
+        "runtime": {"modules", "java_options", "exclude_natives"},
         "windows": {"upgrade_uuid", "installer_version", "per_user"}, "linux": {"package_name", "menu_group"},
         "flatpak": {"manifest"},
     }

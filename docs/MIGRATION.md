@@ -15,7 +15,7 @@ The library can read `appVersion` and `appPatch` from `gradle.properties`, and `
 
 ## Runtime credentials
 
-Values supplied through `runtime.environment_properties` become launcher JVM properties and can be inspected in the installed package. Base64 only changes representation; it does not hide a secret. Keep true credentials outside the installer and read them from the runtime environment or a protected local configuration source. Never print or commit a project's `.env`.
+`runtime.environment_properties` has been removed because it embedded values in the installed launcher. Migrate applications to process environment variables or a private per-user `.env` read at startup; `megalodonte.config.RuntimeEnvironment` provides the shared lookup. Build workflows no longer need application secrets. Never print or commit a project's `.env`.
 
 ## Shared source and release order
 

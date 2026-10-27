@@ -8,12 +8,7 @@ WORKFLOW = f"{OWNER}/megalodonte-packaging/.github/workflows/package-javafx.yml@
 DEPENDENCIES = {"pack-utilities", "disgust", "jsonc-ui", "script-app", "simple-clipboard"}
 
 
-def client_workflow(name, directory=".", dependencies="", release=True, smoke=False, credentials=False):
-    secret_section = """
-    secrets:
-      GOBITECH_ADMIN_LOGIN: ${{ secrets.GOBITECH_ADMIN_LOGIN }}
-      GOBITECH_ADMIN_PASSWORD: ${{ secrets.GOBITECH_ADMIN_PASSWORD }}
-""" if credentials else ""
+def client_workflow(name, directory=".", dependencies="", release=True, smoke=False):
     return f"""name: Package installers
 on:
   workflow_dispatch:
@@ -33,7 +28,7 @@ jobs:
       dependencies: '{dependencies}'
       release: {str(release).lower()}
       smoke-test: {str(smoke).lower()}
-{secret_section}"""
+"""
 
 
 def configure_client(project, artifact, dependencies="", smoke=True, release=True, force=False):
@@ -65,17 +60,17 @@ def remove_module_workaround(text):
 def configure(workspace):
     world = workspace / "megalodonte-world"
     clients = [
-        (world / "applications/plics-sw", "plics-sw", "pack-utilities disgust jsonc-ui", True, False),
-        (world / "applications/gobitech-pesagem", "gobitech", "pack-utilities jsonc-ui", True, True),
-        (world / "nojo-engine-ui-creator", "nojo-engine-ui-creator", "pack-utilities", False, False),
-        (world / "applications/Everest", "everest", "", False, False),
-        (world / "applications/megalodonte-cliente", "megalodonte-cliente", "script-app", False, False),
-        (workspace / "ftp-file-pusher", "ftp-file-pusher", "simple-clipboard", False, False),
+        (world / "applications/plics-sw", "plics-sw", "pack-utilities disgust jsonc-ui", True),
+        (world / "applications/gobitech-pesagem", "gobitech", "pack-utilities jsonc-ui", True),
+        (world / "nojo-engine-ui-creator", "nojo-engine-ui-creator", "pack-utilities", False),
+        (world / "applications/Everest", "everest", "", False),
+        (world / "applications/megalodonte-cliente", "megalodonte-cliente", "script-app", False),
+        (workspace / "ftp-file-pusher", "ftp-file-pusher", "simple-clipboard", False),
     ]
-    for root, name, dependencies, smoke, credentials in clients:
+    for root, name, dependencies, smoke in clients:
         target = root / ".github/workflows/package.yml"
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(client_workflow(name, dependencies=dependencies, smoke=smoke, credentials=credentials), encoding="utf-8")
+        target.write_text(client_workflow(name, dependencies=dependencies, smoke=smoke), encoding="utf-8")
     ecosystem = world / "framework/megalodonte-ecossystem"
     demos = ["megalodonte-app1-welcome", "megalodonte-app2-counter", "megalodonte-app3-string-lenght",
              "megalodonte-app4-hide-seek", "megalodonte-app5-todo-list"]

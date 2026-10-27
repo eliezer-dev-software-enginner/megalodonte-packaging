@@ -33,7 +33,7 @@ jobs:
 
 Only declare extra dependencies that the application actually uses. Supported names are `pack-utilities`, `disgust`, `jsonc-ui`, `script-app` and `simple-clipboard`. `disgust` implies `pack-utilities`; `script-app` implies `jsonc-ui`. The `prepare` command clones and publishes the six desktop framework libraries in dependency order, then clones and publishes selected extra dependencies. The separate portable reactivity library is not part of desktop CI. CI sets `ORG_GRADLE_PROJECT_useLocalSources=false` to avoid accidentally depending on a developer's adjacent checkout.
 
-If the caller needs the existing Gobitech administrator settings, it must explicitly forward `GOBITECH_ADMIN_LOGIN` and `GOBITECH_ADMIN_PASSWORD` as secrets. Those values are only available to the packaging job and are not printed. Other applications should not copy those settings into their workflow. Runtime application credentials must be provided at runtime, not baked into a public installer.
+Do not forward application credentials to this workflow. The installer contains no project `.env`; each installation supplies credentials through its process environment or a protected per-user `.env` at runtime.
 
 ## Version and release
 

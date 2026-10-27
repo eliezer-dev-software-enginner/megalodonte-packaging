@@ -10,7 +10,6 @@ import platform as host_platform
 import zipfile
 
 from .config import PackageConfig
-from .credentials import environment_options
 
 
 class Packager:
@@ -98,7 +97,6 @@ class Packager:
         runtime = self.config.data.get("runtime", {})
         options.extend(runtime.get("java_options", []))
         options.extend(self.profile.get("java_options", []))
-        options.extend(environment_options(self.config.root, runtime.get("environment_properties", []), redact=redact))
         return options
 
     def gradle_command(self) -> list[str]:
