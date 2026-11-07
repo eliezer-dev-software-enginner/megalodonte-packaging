@@ -33,6 +33,21 @@ jobs:
 
 Only declare extra dependencies that the application actually uses. Supported names are `pack-utilities`, `disgust`, `jsonc-ui`, `script-app` and `simple-clipboard`. `disgust` implies `pack-utilities`; `script-app` implies `jsonc-ui`. The `prepare` command clones and publishes the six desktop framework libraries in dependency order, then clones and publishes selected extra dependencies. The separate portable reactivity library is not part of desktop CI. CI sets `ORG_GRADLE_PROJECT_useLocalSources=false` to avoid accidentally depending on a developer's adjacent checkout.
 
+The `dependencies` input accepts registered aliases, not repository URLs or
+Maven coordinates. For example, `disgust` maps to the public
+[`disgust-components`](https://github.com/eliezer-dev-software-enginner/disgust-components)
+repository; the preparer publishes both its main artifact and `disgust-icons`.
+
+### Future consideration: Gradle repository URLs
+
+Consider allowing callers to specify additional Gradle repository URLs for local
+publication, rather than requiring every dependency to be registered in the
+shared preparer. This is not implemented. A design should account for explicit
+task names and publication coordinates, dependency order, ref pinning,
+authentication for private repositories, failure reporting and the security
+implications of executing a repository's build on CI runners. Preserve the
+existing aliases and their transitive dependencies when evaluating compatibility.
+
 Do not forward application credentials to this workflow. The installer contains no project `.env`; each installation supplies credentials through its process environment or a protected per-user `.env` at runtime.
 
 ## Version and release
