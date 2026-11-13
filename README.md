@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/megalodonte-logo.png" width="180" alt="Megalodonte logo">
+</p>
+
 # Megalodonte Packaging
 
 `megalodonte-packaging` is the shared Python library for native JavaFX installers. It owns the Gradle → application input → `jdeps`/`jlink` → `jpackage` pipeline, versioning, launcher profiles, and AppImage assembly. Application repositories keep only `packaging.toml` and a thin command adapter; they do not copy packaging algorithms.
@@ -52,6 +56,23 @@ megalodonte-package --project . version release 1.2.0
 Profiles must be declared by the application. `--dry-run` prints commands without building, deleting files or reading credentials. `--platform windows|linux` is available only with `--dry-run`. `--skip-build` reuses a Gradle output; `--smoke-test` briefly launches the generated runtime; `--keep-work` retains staging. `--open` opens the output directory outside CI. `--run` launches an AppImage and writes `dist/appimage-run.log`. `--install-flatpak` explicitly allows local installation; the default only builds.
 
 `version patch` increments `appPatch` in the application's `gradle.properties`. `version release X.Y.Z` sets `appVersion` and resets `appPatch` to zero in that file.
+
+## FAQ
+
+### Do I need to install the JavaFX modules? When?
+
+You do not need an external JavaFX SDK merely to develop or run a Gradle-based
+Megalodonte application. The OpenJFX Gradle plugin can resolve JavaFX and its
+platform-native artifacts as regular dependencies, and `megalodonte dev`
+configures their JVM module path automatically.
+
+You do need a matching external JavaFX SDK when this package **builds** an
+application image or installer. `jlink` and `jpackage` consume the SDK's modular
+JARs and native files to create a self-contained runtime. Point `javafx.sdk` in
+`packaging.toml` to that SDK, or set `JAVAFX_MODULES_HOME` (not
+`JAVAFX_MODULES`). A computer that only runs the resulting AppImage, DEB or MSI
+does not need either setting because the required JavaFX modules are already in
+the packaged runtime.
 
 ## Configuration
 
