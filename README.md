@@ -57,6 +57,23 @@ Profiles must be declared by the application. `--dry-run` prints commands withou
 
 `version patch` increments `appPatch` in the application's `gradle.properties`. `version release X.Y.Z` sets `appVersion` and resets `appPatch` to zero in that file.
 
+## FAQ
+
+### Do I need to install the JavaFX modules? When?
+
+You do not need an external JavaFX SDK merely to develop or run a Gradle-based
+Megalodonte application. The OpenJFX Gradle plugin can resolve JavaFX and its
+platform-native artifacts as regular dependencies, and `megalodonte dev`
+configures their JVM module path automatically.
+
+You do need a matching external JavaFX SDK when this package **builds** an
+application image or installer. `jlink` and `jpackage` consume the SDK's modular
+JARs and native files to create a self-contained runtime. Point `javafx.sdk` in
+`packaging.toml` to that SDK, or set `JAVAFX_MODULES_HOME` (not
+`JAVAFX_MODULES`). A computer that only runs the resulting AppImage, DEB or MSI
+does not need either setting because the required JavaFX modules are already in
+the packaged runtime.
+
 ## Configuration
 
 An application owns `packaging.toml` (`schema_version = 1`). It declares its name, main class, build mode, JavaFX version, icons, runtime modules, native exclusions, package metadata and optional profiles. Version and vendor can also come from `gradle.properties`. See [the configuration reference](docs/CONFIGURATION.md) and [migration notes](docs/MIGRATION.md).

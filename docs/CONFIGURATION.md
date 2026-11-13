@@ -51,7 +51,7 @@ jpackage_args = []
 manifest = "flatpak/com.example.App.yml"
 ```
 
-Artifact, staging and output paths resolve from the application root, independent of the invocation directory. Icon paths and JAR globs cannot escape that root. Set the external JavaFX SDK through `javafx.sdk` or `JAVAFX_MODULES_HOME`; the latter must contain `<platform>-<version>/lib`. The library also searches ancestor `java_fx_modules` directories in a workspace. `JAVA_HOME` must point to a complete JDK; a path ending in `bin` is normalized. On Windows, a JDK 25 under Program Files is a fallback when Java is not on `PATH`. WiX 3 can be discovered under Program Files or supplied through `WIX_HOME`/`PATH`.
+Artifact, staging and output paths resolve from the application root, independent of the invocation directory. Icon paths and JAR globs cannot escape that root. Packaging with `jlink`/`jpackage` requires an external JavaFX SDK; normal Gradle execution and `megalodonte dev` do not. Set the packaging SDK through `javafx.sdk` or `JAVAFX_MODULES_HOME`; the latter must contain `<platform>-<version>/lib`. The variable is named `JAVAFX_MODULES_HOME`, not `JAVAFX_MODULES`. The library also searches ancestor `java_fx_modules` directories in a workspace. `JAVA_HOME` must point to a complete JDK; a path ending in `bin` is normalized. On Windows, a JDK 25 under Program Files is a fallback when Java is not on `PATH`. WiX 3 can be discovered under Program Files or supplied through `WIX_HOME`/`PATH`.
 
 ## Build modes
 
