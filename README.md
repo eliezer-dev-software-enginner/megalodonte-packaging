@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/megalodonte-logo.png" width="180" alt="Megalodonte logo">
+</p>
+
 # Megalodonte Packaging
 
 `megalodonte-packaging` is the shared Python library for native JavaFX installers. It owns the Gradle → application input → `jdeps`/`jlink` → `jpackage` pipeline, versioning, launcher profiles, and AppImage assembly. Application repositories keep only `packaging.toml` and a thin command adapter; they do not copy packaging algorithms.
