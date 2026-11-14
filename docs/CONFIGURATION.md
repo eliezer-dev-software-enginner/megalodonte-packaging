@@ -67,6 +67,13 @@ jar = "build/install/example-app/lib/example-app-{version}.jar"
 dependencies = "build/install/example-app/lib/*.jar"
 ```
 
+Keep the application version in one source. The recommended Gradle setup is
+`appVersion=X.Y.Z` in `gradle.properties`, with
+`version = providers.gradleProperty("appVersion").get()` in
+`build.gradle.kts`; omit `app.version` from `packaging.toml`. The packager reads
+the same property when expanding `{version}`, so changing the release does not
+leave the installer looking for a JAR with a different version.
+
 If `dependencies` is omitted, sibling JARs beside the main JAR are used. The main JAR manifest receives a `Class-Path` containing the dependency names. JavaFX is excluded from that classpath because its modules live in the linked runtime. Dependency JARs are not modified. A signed main JAR is not rewritten because that would invalidate its signature.
 
 ## Runtime credentials
