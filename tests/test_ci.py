@@ -73,7 +73,7 @@ class CiTests(unittest.TestCase):
             clipboard_tasks,
         )
 
-    def test_desktop_ci_does_not_clone_the_private_portable_library(self):
+    def test_desktop_ci_does_not_clone_a_removed_portable_wrapper(self):
         self.assertNotIn(
             "megalodonte-reactivity-portable",
             FRAMEWORK_LIBRARIES,
